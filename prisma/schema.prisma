@@ -1,0 +1,39 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id            String      @id
+  name          String
+  avatar        String?
+  discriminator String
+  storageQuota  Int         @default(1000000)
+  storageUsage  Int         @default(0)
+  email         String?
+  saves         CloudSave[]
+  tokens        UserToken[]
+}
+
+model CloudSave {
+  id         String    @id
+  createdAt  DateTime  @default(now())
+  creator    User      @relation(fields: [creatorId], references: [id])
+  creatorId  String
+  size       Int
+}
+
+model UserToken {
+  id        String    @id @default(uuid())
+  token     String    @unique
+  createdAt DateTime  @default(now())
+  user      User      @relation(fields: [userId], references: [id])
+  userId    String
+}
