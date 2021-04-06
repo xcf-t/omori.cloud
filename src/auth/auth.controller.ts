@@ -1,12 +1,16 @@
 import {
     BadRequestException,
-    Controller, Delete,
-    Get, Param,
+    Controller,
+    Delete,
+    Get,
+    Param,
     Query,
     Redirect,
     Req,
     Res,
-    UseGuards, UsePipes, ValidationPipe,
+    UseGuards,
+    UsePipes,
+    ValidationPipe,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { PrismaService } from '../prisma/prisma.service';

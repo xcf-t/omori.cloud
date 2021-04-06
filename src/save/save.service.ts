@@ -4,7 +4,7 @@ import {
     NotFoundException,
 } from '@nestjs/common';
 import { join } from 'path';
-import { ensureDir, pathExists, rmdir, unlink } from 'fs-extra';
+import { ensureDir, pathExists, rmdir, unlink, readdir } from 'fs-extra';
 import { PrismaService } from '../prisma/prisma.service';
 import { User, CloudSave } from '@prisma/client';
 import { spawn } from 'child_process';
@@ -21,6 +21,19 @@ export class SaveService {
         private configService: ConfigService,
     ) {
         this.zstd = this.configService.get('main.zstd');
+    }
+
+    getSave(id: string): Promise<CloudSave> {
+        return this.prismaService.cloudSave.findUnique({
+            where: { id },
+        });
+    }
+
+    async updateSave(id: string, description: string) {
+        await this.prismaService.cloudSave.update({
+            where: { id },
+            data: { description },
+        });
     }
 
     async deleteSave(id: string, user: User): Promise<void> {
@@ -40,17 +53,31 @@ export class SaveService {
             where: { id },
         });
 
-        const path = await this.getSavePath(id, true);
-
-        await unlink(path);
-        await rmdir(join(path, '..'));
+        await this.deleteSaveFiles(id);
     }
 
-    async createSave(id: string, user: User, size: number): Promise<CloudSave> {
+    async deleteSaveFiles(id: string): Promise<void> {
+        const dataPath = await this.getSavePath(id, true, '.data');
+        const metaPath = await this.getSavePath(id, true, '.meta');
+
+        await unlink(dataPath);
+        await unlink(metaPath);
+
+        const fileCount = await readdir(join(dataPath, '..'));
+        if (fileCount.length == 0) await rmdir(join(dataPath, '..'));
+    }
+
+    async createSave(
+        id: string,
+        user: User,
+        size: number,
+        description: string,
+    ): Promise<CloudSave> {
         const save = this.prismaService.cloudSave.create({
             data: {
                 id,
                 creatorId: user.id,
+                description,
                 size,
             },
         });
@@ -63,19 +90,45 @@ export class SaveService {
         return save;
     }
 
-    async getSaveData(id: string): Promise<Readable> {
+    getSaveData(id: string): Promise<Readable> {
+        return this.getSaveFile(id, '.data');
+    }
+
+    getSaveMeta(id: string): Promise<Readable> {
+        return this.getSaveFile(id, '.meta');
+    }
+
+    private async getSaveFile(id: string, suffix: string): Promise<Readable> {
         const decompressor = spawn(
             this.zstd,
-            ['-d', '-c', '-D', 'dictionary', await this.getSavePath(id, false)],
+            [
+                '-d',
+                '-c',
+                '-D',
+                'dictionary',
+                await this.getSavePath(id, false, suffix),
+            ],
             { cwd: join(process.cwd(), 'Saves') },
         );
 
         return decompressor.stdout;
     }
 
-    async createSaveData(id: string, data: Buffer): Promise<number> {
+    public createSaveData(id: string, data: Buffer): Promise<number> {
+        return this.createSaveFile(id, data, '.data');
+    }
+
+    public createSaveMeta(id: string, data: Buffer): Promise<number> {
+        return this.createSaveFile(id, data, '.meta');
+    }
+
+    private async createSaveFile(
+        id: string,
+        data: Buffer,
+        suffix: string,
+    ): Promise<number> {
         return new Promise<number>(async (resolve, reject) => {
-            const path = await this.getSavePath(id, true);
+            const path = await this.getSavePath(id, true, suffix);
 
             const compressor = spawn(
                 this.zstd,
@@ -111,10 +164,10 @@ export class SaveService {
         });
     }
 
-    async getSavePath(id: string, create = true): Promise<string> {
+    async getSavePath(id: string, create = true, suffix = ''): Promise<string> {
         const bucket = id.substring(0, 3);
 
-        const path = join(process.cwd(), 'Saves', bucket, `${id}`);
+        const path = join(process.cwd(), 'Saves', bucket, `${id}${suffix}`);
 
         if (create) {
             const dir = join(process.cwd(), 'Saves', bucket);

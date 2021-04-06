@@ -23,11 +23,12 @@ model User {
 }
 
 model CloudSave {
-  id         String    @id
-  createdAt  DateTime  @default(now())
-  creator    User      @relation(fields: [creatorId], references: [id])
-  creatorId  String
-  size       Int
+  id          String    @id
+  description String   @default("")
+  createdAt   DateTime  @default(now())
+  creator     User      @relation(fields: [creatorId], references: [id])
+  creatorId   String
+  size        Int
 }
 
 model UserToken {
