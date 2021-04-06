@@ -11,6 +11,7 @@ import { spawn } from 'child_process';
 import { createWriteStream } from 'fs';
 import { Readable } from 'stream';
 import { ConfigService } from '@nestjs/config';
+import { createHash } from 'crypto';
 
 @Injectable()
 export class SaveService {
@@ -36,7 +37,13 @@ export class SaveService {
         });
     }
 
-    async updateSaveSize(id: string, user: string, size: number) {
+    async updateSaveSize(
+        id: string,
+        user: string,
+        size: number,
+        dataHash: string,
+        metaHash: string,
+    ) {
         const save = await this.prismaService.cloudSave.findUnique({
             where: { id },
         });
@@ -50,7 +57,11 @@ export class SaveService {
 
         await this.prismaService.cloudSave.update({
             where: { id },
-            data: { size },
+            data: {
+                size,
+                dataHash,
+                metaHash,
+            },
         });
     }
 
@@ -90,6 +101,8 @@ export class SaveService {
         user: User,
         size: number,
         description: string,
+        dataHash: string,
+        metaHash: string,
     ): Promise<CloudSave> {
         const save = this.prismaService.cloudSave.create({
             data: {
@@ -97,6 +110,8 @@ export class SaveService {
                 creatorId: user.id,
                 description,
                 size,
+                dataHash,
+                metaHash,
             },
         });
 
@@ -132,11 +147,17 @@ export class SaveService {
         return decompressor.stdout;
     }
 
-    public createSaveData(id: string, data: Buffer): Promise<number> {
+    public createSaveData(
+        id: string,
+        data: Buffer,
+    ): Promise<{ size: number; hash: string }> {
         return this.createSaveFile(id, data, '.data');
     }
 
-    public createSaveMeta(id: string, data: Buffer): Promise<number> {
+    public createSaveMeta(
+        id: string,
+        data: Buffer,
+    ): Promise<{ size: number; hash: string }> {
         return this.createSaveFile(id, data, '.meta');
     }
 
@@ -144,9 +165,10 @@ export class SaveService {
         id: string,
         data: Buffer,
         suffix: string,
-    ): Promise<number> {
-        return new Promise<number>(async (resolve, reject) => {
+    ): Promise<{ size: number; hash: string }> {
+        return new Promise(async (resolve, reject) => {
             const path = await this.getSavePath(id, true, suffix);
+            const hash = createHash('md5');
 
             const compressor = spawn(
                 this.zstd,
@@ -164,10 +186,10 @@ export class SaveService {
 
             compressor.stdout.pipe(out);
 
-            compressor.stdout.on(
-                'data',
-                (data: Buffer) => (filesize += data.length),
-            );
+            compressor.stdout.on('data', (data: Buffer) => {
+                filesize += data.length;
+                hash.update(data);
+            });
 
             compressor.stdin.write(data, (error) => {
                 if (error) reject(error);
@@ -178,7 +200,12 @@ export class SaveService {
                 if (error) reject(error);
             });
 
-            compressor.on('close', () => resolve(filesize));
+            compressor.on('close', () =>
+                resolve({
+                    size: filesize,
+                    hash: hash.digest().toString('base64'),
+                }),
+            );
         });
     }
 

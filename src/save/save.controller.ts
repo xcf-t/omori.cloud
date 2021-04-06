@@ -78,6 +78,12 @@ export class SaveController {
         stream.pipe(res);
     }
 
+    @Get(':uuid/info')
+    @UsePipes(ValidationPipe)
+    async getSaveInfo(@Param() { uuid }: SaveDownloadDto) {
+        return await this.saveService.getSave(uuid);
+    }
+
     @Get(':uuid/meta')
     @ApiOperation({ description: 'Downloads the meta file of the save' })
     @ApiResponse({ status: 200, description: 'Meta file in JSON format' })
@@ -128,20 +134,22 @@ export class SaveController {
 
         await this.saveService.deleteSaveFiles(uuid);
 
-        const dataSize = await this.saveService.createSaveData(
-            uuid,
-            files.save[0].buffer,
-        );
+        const {
+            hash: dataHash,
+            size: dataSize,
+        } = await this.saveService.createSaveData(uuid, files.save[0].buffer);
 
-        const metaSize = await this.saveService.createSaveMeta(
-            uuid,
-            files.meta[0].buffer,
-        );
+        const {
+            hash: metaHash,
+            size: metaSize,
+        } = await this.saveService.createSaveMeta(uuid, files.meta[0].buffer);
 
         await this.saveService.updateSaveSize(
             uuid,
             req.user.id,
             dataSize + metaSize,
+            dataHash,
+            metaHash,
         );
     }
 
@@ -164,15 +172,15 @@ export class SaveController {
 
         const id = uuidv4();
 
-        const dataSize = await this.saveService.createSaveData(
-            id,
-            files.save[0].buffer,
-        );
+        const {
+            hash: dataHash,
+            size: dataSize,
+        } = await this.saveService.createSaveData(id, files.save[0].buffer);
 
-        const metaSize = await this.saveService.createSaveMeta(
-            id,
-            files.meta[0].buffer,
-        );
+        const {
+            hash: metaHash,
+            size: metaSize,
+        } = await this.saveService.createSaveMeta(id, files.meta[0].buffer);
 
         if (
             dataSize + metaSize + req.user.storageUsage >
@@ -190,6 +198,8 @@ export class SaveController {
             req.user,
             dataSize,
             description,
+            dataHash,
+            metaHash,
         );
     }
 }

@@ -17,7 +17,7 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Response } from 'express';
 import { AuthGuard, AuthorizedRequest } from './auth.guard';
 import { RevokeTokenDto } from './dto/revoke-token.dto';
-import { ApiForbiddenResponse, ApiOkResponse, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiResponse, ApiTags } from '@nestjs/swagger';
 
 @ApiTags('Authentication')
 @Controller('auth')
@@ -135,5 +135,11 @@ export class AuthController {
     })
     async check() {
         return { ok: true };
+    }
+
+    @Get('info')
+    @UseGuards(AuthGuard)
+    async info(@Req() req: AuthorizedRequest) {
+        return req.user;
     }
 }
