@@ -2,15 +2,16 @@ import {
     BadRequestException,
     Body,
     Controller,
-    Delete, ForbiddenException,
-    Get, NotFoundException,
+    Delete,
+    ForbiddenException,
+    Get,
+    NotFoundException,
     Param,
     Patch,
     PayloadTooLargeException,
     Post,
     Req,
     Res,
-    UploadedFile,
     UploadedFiles,
     UseGuards,
     UseInterceptors,
@@ -22,16 +23,19 @@ import { AuthGuard, AuthorizedRequest } from '../auth/auth.guard';
 import { SaveDownloadDto } from './dto/save-download.dto';
 import { SaveService } from './save.service';
 import { v4 as uuidv4 } from 'uuid';
-import {
-    FileFieldsInterceptor,
-    FileInterceptor,
-} from '@nestjs/platform-express';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { CloudSave } from '@prisma/client';
-import { rmdir, unlink } from 'fs-extra';
-import { join } from 'path';
 import { SaveUploadDto } from './dto/save-upload.dto';
 import { SaveUploadFilesDto } from './dto/save-upload-files-dto';
+import {
+    ApiConsumes,
+    ApiOperation,
+    ApiResponse,
+    ApiTags,
+} from '@nestjs/swagger';
+import { SaveDataDto } from './dto/save-data.dto';
 
+@ApiTags('Save Management')
 @Controller('save')
 export class SaveController {
     constructor(private saveService: SaveService) {}
@@ -49,12 +53,16 @@ export class SaveController {
     }
 
     @Get('list')
+    @ApiOperation({ description: 'Lists all your saves' })
+    @ApiResponse({ type: SaveDataDto, status: 200 })
     @UseGuards(AuthGuard)
     listSaves(@Req() req: AuthorizedRequest): Promise<CloudSave[]> {
         return this.saveService.listSaves(req.user.id);
     }
 
     @Get(':uuid/data')
+    @ApiOperation({ description: 'Downloads the data file of the save' })
+    @ApiResponse({ status: 200, description: 'Data file in JSON format' })
     @UsePipes(ValidationPipe)
     async downloadSaveData(
         @Param() { uuid }: SaveDownloadDto,
@@ -71,6 +79,8 @@ export class SaveController {
     }
 
     @Get(':uuid/meta')
+    @ApiOperation({ description: 'Downloads the meta file of the save' })
+    @ApiResponse({ status: 200, description: 'Meta file in JSON format' })
     @UsePipes(ValidationPipe)
     async downloadSaveMeta(
         @Param() { uuid }: SaveDownloadDto,
@@ -89,6 +99,8 @@ export class SaveController {
     @Patch(':uuid')
     @UsePipes(ValidationPipe)
     @UseGuards(AuthGuard)
+    @ApiConsumes('multipart/form-data')
+    @ApiOperation({ description: 'Updates a previously created save' })
     @UseInterceptors(
         FileFieldsInterceptor([
             { name: 'save', maxCount: 1 },
@@ -111,7 +123,8 @@ export class SaveController {
         if (!save) throw new NotFoundException();
         if (save.creatorId != req.user.id) throw new ForbiddenException();
 
-        if (description) await this.saveService.updateSave(uuid, description);
+        if (description)
+            await this.saveService.updateSaveDescription(uuid, description);
 
         await this.saveService.deleteSaveFiles(uuid);
 
@@ -120,14 +133,22 @@ export class SaveController {
             files.save[0].buffer,
         );
 
-        const metaSize = await this.saveService.createSaveData(
+        const metaSize = await this.saveService.createSaveMeta(
             uuid,
             files.meta[0].buffer,
+        );
+
+        await this.saveService.updateSaveSize(
+            uuid,
+            req.user.id,
+            dataSize + metaSize,
         );
     }
 
     @Post()
     @UseGuards(AuthGuard)
+    @ApiConsumes('multipart/form-data')
+    @ApiOperation({ description: 'Creates a new save from the supplied files' })
     @UseInterceptors(
         FileFieldsInterceptor([
             { name: 'save', maxCount: 1 },
@@ -148,7 +169,7 @@ export class SaveController {
             files.save[0].buffer,
         );
 
-        const metaSize = await this.saveService.createSaveData(
+        const metaSize = await this.saveService.createSaveMeta(
             id,
             files.meta[0].buffer,
         );

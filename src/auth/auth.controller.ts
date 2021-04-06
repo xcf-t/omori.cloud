@@ -17,7 +17,9 @@ import { PrismaService } from '../prisma/prisma.service';
 import { Response } from 'express';
 import { AuthGuard, AuthorizedRequest } from './auth.guard';
 import { RevokeTokenDto } from './dto/revoke-token.dto';
+import { ApiForbiddenResponse, ApiOkResponse, ApiResponse, ApiTags } from '@nestjs/swagger';
 
+@ApiTags('Authentication')
 @Controller('auth')
 export class AuthController {
     constructor(
@@ -119,5 +121,19 @@ export class AuthController {
 
             res.json({ error: 'Something went wrong' });
         }
+    }
+
+    @Get('check')
+    @UseGuards(AuthGuard)
+    @ApiResponse({
+        status: 200,
+        description: 'Returned when the token is valid',
+    })
+    @ApiResponse({
+        status: 403,
+        description: 'Returned when the token is invalid',
+    })
+    async check() {
+        return { ok: true };
     }
 }

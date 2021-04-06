@@ -29,10 +29,28 @@ export class SaveService {
         });
     }
 
-    async updateSave(id: string, description: string) {
+    async updateSaveDescription(id: string, description: string) {
         await this.prismaService.cloudSave.update({
             where: { id },
             data: { description },
+        });
+    }
+
+    async updateSaveSize(id: string, user: string, size: number) {
+        const save = await this.prismaService.cloudSave.findUnique({
+            where: { id },
+        });
+
+        await this.prismaService.user.update({
+            where: { id: user },
+            data: {
+                storageUsage: { increment: save.size - size },
+            },
+        });
+
+        await this.prismaService.cloudSave.update({
+            where: { id },
+            data: { size },
         });
     }
 
@@ -60,8 +78,8 @@ export class SaveService {
         const dataPath = await this.getSavePath(id, true, '.data');
         const metaPath = await this.getSavePath(id, true, '.meta');
 
-        await unlink(dataPath);
-        await unlink(metaPath);
+        if (await pathExists(dataPath)) await unlink(dataPath);
+        if (await pathExists(metaPath)) await unlink(metaPath);
 
         const fileCount = await readdir(join(dataPath, '..'));
         if (fileCount.length == 0) await rmdir(join(dataPath, '..'));
