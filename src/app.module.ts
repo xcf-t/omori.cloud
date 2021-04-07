@@ -5,6 +5,7 @@ import { SaveModule } from './save/save.module';
 import { ConfigModule } from '@nestjs/config';
 import { discordConfig } from './config/discord.config';
 import { mainConfig } from './config/main.config';
+import { AppController } from './app.controller';
 
 @Module({
     imports: [
@@ -16,5 +17,6 @@ import { mainConfig } from './config/main.config';
             isGlobal: true,
         }),
     ],
+    controllers: [AppController],
 })
 export class AppModule {}
