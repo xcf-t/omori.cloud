@@ -10,6 +10,8 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 
     const app = await NestFactory.create(AppModule);
 
+    app.enableCors();
+
     const config = new DocumentBuilder()
         .setTitle('OmoriCloud')
         .setDescription('Cloud Storage for Omori Saves')
