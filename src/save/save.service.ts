@@ -39,28 +39,31 @@ export class SaveService {
 
     async updateSaveSize(
         id: string,
-        user: string,
         size: number,
         dataHash: string,
         metaHash: string,
     ) {
-        const save = await this.prismaService.cloudSave.findUnique({
-            where: { id },
-        });
-
-        await this.prismaService.user.update({
-            where: { id: user },
-            data: {
-                storageUsage: { increment: save.size - size },
-            },
-        });
-
         await this.prismaService.cloudSave.update({
             where: { id },
             data: {
                 size,
                 dataHash,
                 metaHash,
+            },
+        });
+    }
+
+    async recalculateUserSaves(user: string) {
+        const saves = await this.prismaService.cloudSave.findMany({
+            where: { creatorId: user },
+        });
+
+        const size = saves.reduce((val, save) => val + save.size, 0);
+
+        await this.prismaService.user.update({
+            where: { id: user },
+            data: {
+                storageUsage: size,
             },
         });
     }
@@ -72,11 +75,6 @@ export class SaveService {
 
         if (!save) throw new NotFoundException();
         if (save.creatorId != user.id) throw new ForbiddenException();
-
-        await this.prismaService.user.update({
-            where: { id: user.id },
-            data: { storageUsage: user.storageUsage - save.size },
-        });
 
         await this.prismaService.cloudSave.delete({
             where: { id },

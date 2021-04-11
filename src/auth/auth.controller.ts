@@ -110,13 +110,6 @@ export class AuthController {
                 },
             });
 
-            /*res.json({
-                token: userToken.token,
-                user: user.id,
-                name: user.name,
-                discriminator: user.discriminator,
-            });*/
-
             res.render('token', {
                 tag: `${user.name}#${user.discriminator}`,
                 token: userToken.token,

@@ -49,6 +49,8 @@ export class SaveController {
     ) {
         await this.saveService.deleteSave(uuid, req.user);
 
+        await this.saveService.recalculateUserSaves(req.user.id);
+
         return { ok: true };
     }
 
@@ -146,11 +148,12 @@ export class SaveController {
 
         await this.saveService.updateSaveSize(
             uuid,
-            req.user.id,
             dataSize + metaSize,
             dataHash,
             metaHash,
         );
+
+        await this.saveService.recalculateUserSaves(req.user.id);
     }
 
     @Post()
