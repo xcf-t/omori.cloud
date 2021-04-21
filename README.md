@@ -1,4 +1,6 @@
-
+<p align="center">
+  <a href="http://omorimods.com/" target="blank"><img src="https://raw.githubusercontent.com/xcf-t/omori.cloud/5f5b380eba796bf18a6b6ba06dce96cd2fb4ddc4/logo.svg" height="320" alt="Nest Logo" /></a>
+</p>
 
   <p align="center">A simple cloudsave backend for omori made in NestJS</p>
 
