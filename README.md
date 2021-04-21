@@ -1,6 +1,4 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo_text.svg" width="320" alt="Nest Logo" /></a>
-</p>
+
 
   <p align="center">A simple cloudsave backend for omori made in NestJS</p>
 
@@ -32,4 +30,4 @@ $ npm run start:prod
 
 ## License
 
-Nest is [MIT licensed](LICENSE).
+This application is [MIT licensed](LICENSE).
