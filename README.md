@@ -25,7 +25,7 @@ $ npm run start:prod
 
 ## Stay in touch
 
-- Author - [xcf_t](https://github.com/xcf_t)
+- Author - [xcf-t](https://github.com/xcf-t)
 - Discord - [omorimods.com](https://discord.com/invite/EDTMF85Hnp)
 - Website - [https://omorimods.com](https://omorimods.com/)
 - Twitter - [@omorimods](https://twitter.com/omorimods)
